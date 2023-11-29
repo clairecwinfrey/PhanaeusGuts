@@ -11,13 +11,15 @@ library(vegan)
 library(phyloseq)
 
 load("ps_rare_diss_shann_.RData") # this has all the distances, phyloseq objects, etc. Made in Rarefy_Shannon_dissimilarities_final.R
-load("among.pop.allguts.dbMEM_april4_2023.RData") # this is where dbMEMs that were created and selected were saved. From "inter_pop_dbMEMUpadted.R"
+# load("among.pop.allguts.dbMEM_april4_2023.RData") # this is where dbMEMs that were created and selected were saved. From "inter_pop_dbMEMUpadted.R"
+load("inter_pop_dbMEMs_Nov28_2023.RData")
 load("gut_coords.RData")
 
 gut_r_veg_final_sampdat #Ord_Cattle_PresenceRank is correct
 set.seed(93)
 
 # RData files saved in this document:
+#### *** NOT UPDATED YET NOV. 2023 ####
 # 1. "env_geo_for_varpart_April4_2023.RData -- all model sel before varpart (i.e. compiling significant geo vars and mod sel on environ.)
 # 2. "varpart_April4_2023.RData" -- variation partitioning 
 # 3. "dbRDAsVarPart_allGuts.RData" -- model selection, VIFs, dbRDAs, and ANOVAs for all of the gut samples considered together
@@ -29,10 +31,10 @@ set.seed(93)
 
 ####### 1.  MAKE A CATEGORY CALLED "GEO" THAT HAS X,Y COORDS AND SIGNIFICANT DBMEMS
 # which MEMs were significant? Only positive
-guts.AmPop.pos.dbmem
+#guts.AmPop.pos.dbmem
 guts.AmPop.jacc.pos.forsel.results #3 were significant . 
-#Now afterr Sidak correction: #MEMs 
-guts.jacc.AmPop.pos.final 
+#Now afterr Sidak correction: #MEMs 7 and 5 only 
+guts.jacc.AmPop.pos.final #Now afterr Sidak correction: #MEMs 7 and 5 only 
 
 # MEMS 7 and 5
 guts.jacc.geo <- cbind(guts_centr_coord[,1], guts_centr_coord[,2], guts.AmPop.pos.dbmem$MEM7, guts.AmPop.pos.dbmem$MEM5)  
@@ -42,7 +44,7 @@ rownames(guts.jacc.geo) <- rownames(guts_centr_coord)
 ################ MODEL SELECTION WITH ENVIRONMENTAL VARIABLES ##################
 set.seed(93)
 colnames(gut_r_veg_final_sampdat)
-gut_env_vars <- gut_r_veg_final_sampdat[, c(13:15,20:21)]
+gut_env_vars <- gut_r_veg_final_sampdat[, c(13:15,20:21)] #annual temp, temp. variability, shannon soil, ord cattle presence rank
 gut_env_vars$Ord_Cattle_PresenceRank #still ordinal
 colnames(gut_env_vars)
 
@@ -57,66 +59,25 @@ set.seed(93)
 guts.jacc.env.for.sel <- ordiR2step(guts.jacc.env.dbrda.0, scope = guts.jacc.env.dbrda.all, permutations = 9999)
 guts.jacc.env.for.sel.results <- guts.jacc.env.for.sel$anova
 guts.jacc.env.for.sel.results 
-#cattle, soil shann, temp, precip
+#cattle, soil shann, temp, precip, temp. var
 
 # R2.adj Df    AIC      F Pr(>F)    
 # + Ord_Cattle_PresenceRank 0.010721  2 877.64 2.0728 0.0001 ***
 #   + Soil.Shann.Avg          0.015704  1 877.61 1.9923 0.0007 ***
 #   + Annual.Temp             0.020615  1 877.59 1.9780 0.0004 ***
 #   + Annual.Precip           0.025039  1 877.67 1.8803 0.0011 ** 
-#   <All variables>           0.027239   
+#   + Temp.Variability        0.027239  1 878.18 1.4363 0.0326 *  
+#   <All variables>           0.027239     
 
 # MAKE DATAFRAME OF ENV VAR TO USE
 colnames(gut_env_vars)
-guts.jacc.env.final <- gut_env_vars[,c(1,3:5)]
+# guts.jacc.env.final <- gut_env_vars[,c(1,3:5)] #now all are significant
+guts.jacc.env.final <- gut_env_vars
 rownames(guts.jacc.env.final) 
-colnames(guts.jacc.env.final) #annual temp, annual precip, soil shannon, cattle
+colnames(guts.jacc.env.final) 
 class(guts.jacc.env.final) # dataframe so....LOOKS GOOD AND READY FOR VARPART!
 dim(guts.jacc.env.final)
 
-
-########################### wUniFrac #############################
-
-
-####### 1.  MAKE A CATEGORY CALLED "GEO" THAT HAS X,Y COORDS AND SIGNIFICANT DBMEMS
-# which MEMs were significant? Only positive
-guts.AmPop.pos.dbmem
-guts.AmPop.wUF.pos.forsel.results # NO MEMS were significant after model selection
-
-# SINCE NO MEMS WERE SIGNIFICANT, THIS JUST HAS X AND Y COORDS
-guts.wUF.geo <- cbind(guts_centr_coord[,1], guts_centr_coord[,2])
-colnames(guts.wUF.geo) <- c("centr_X", "centr_Y")
-rownames(guts.wUF.geo) <- rownames(gut_r_veg_final_sampdat)
-dim(guts.wUF.geo)
-
-# FORWARD SELECTION OF ENVIRONMENTAL VARIABLES ON NOT DETRENDED wUF MATRIX (USING ORDIR2STEP)
-
-set.seed(93)
-#1. make model with only intercept 
-guts.wUF.env.dbrda.0 <- dbrda(guts.wUF.dist ~1, data = gut_env_vars) 
-
-#2. make mod with all possible env vars
-guts.wUF.env.dbrda.all <- dbrda(guts.wUF.dist ~ ., data = gut_env_vars) 
-
-#3. double-stop forward model sel
-set.seed(93)
-guts.wUF.env.for.sel <- ordiR2step(guts.wUF.env.dbrda.0, scope = guts.wUF.env.dbrda.all, permutations = 9999)
-guts.wUF.env.for.sel.results <- guts.wUF.env.for.sel$anova
-guts.wUF.env.for.sel.results #
-# avg temp (written annual temp because i misnamed it in metadata...whoops), cattle, and precip!
-
-# R2.adj Df    AIC      F Pr(>F)   
-# + Annual.Temp             0.012315  1 469.82 3.4688 0.0033 **
-#   + Ord_Cattle_PresenceRank 0.020424  2 470.14 1.8154 0.0485 * 
-#   + Annual.Precip           0.033694  1 468.41 3.6777 0.0022 **
-#   <All variables>           0.038545  
-
-# MAKE DATAFRAME OF ENV VAR TO USE
-colnames(gut_env_vars)
-guts.wUF.env.final <-(gut_env_vars[ , c(1,3,5)])
-colnames(guts.wUF.env.final)
-class(guts.wUF.env.final) #dataframe. nice
-guts.wUF.env.final
 
 #objects saved below were created April 4, 2023
 #save(guts.jacc.env.for.sel.results, guts.jacc.env.final, guts.jacc.geo, guts.AmPop.jacc.pos.forsel.results, guts.jacc.AmPop.pos.final, guts.AmPop.wUF.pos.forsel.results, guts.wUF.env.for.sel.results, guts.wUF.env.final, file = "env_geo_for_varpart_April4_2023.RData")
@@ -132,14 +93,7 @@ par(mfrow = c(1,2))
 quartz()
 gut.jacc.varpart.plot <-plot(gut.jacc.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Envir.", "Species", "Patry"), id.size = 1.2) 
 
-colnames(guts.wUF.env.final)
-####### WEIGHTED UNIFRAC #######
-set.seed(93)
-gut.wUF.varpart <- varpart(guts.wUF.dist, as.data.frame(guts.wUF.geo), guts.wUF.env.final, as.data.frame(gut_r_veg_final_sampdat$Species), as.data.frame(gut_r_veg_final_sampdat$Patry))  
 
-par(mfrow = c(1,2))
-quartz()
-gut.wUF.varpart.plot <-plot(gut.wUF.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Envir.", "Species", "Patry"), id.size = 1.2) 
 
 #objects saved below were created April 4, 2023
 # save(gut.jacc.varpart, gut.jacc.varpart.plot, gut.wUF.varpart, gut.wUF.varpart.plot, file = "varpart_April4_2023.RData")
@@ -156,7 +110,8 @@ class(guts.jacc.geo.df)
 colnames(guts.jacc.geo.df)
 
 set.seed(93)
-gut.jacc.dbrda.full <- dbrda(gut.jacc.dist ~ guts.jacc.geo.df$centr_X + guts.jacc.geo.df$centr_Y + guts.jacc.geo.df$posMEM_7 + guts.jacc.geo.df$posMEM_5 + guts.jacc.env.final$Annual.Temp + guts.jacc.env.final$Annual.Precip + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank +gut_r_veg_final_sampdat[,10] + gut_r_veg_final_sampdat$Species + gut_r_veg_final_sampdat$Patry)
+# included beetle mass too
+gut.jacc.dbrda.full <- dbrda(gut.jacc.dist ~ guts.jacc.geo.df$centr_X + guts.jacc.geo.df$centr_Y + guts.jacc.geo.df$posMEM_7 + guts.jacc.geo.df$posMEM_5 + guts.jacc.env.final$Annual.Temp + guts.jacc.env.final$Annual.Precip + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Temp.Variability + guts.jacc.env.final$Ord_Cattle_PresenceRank +gut_r_veg_final_sampdat[,10] + gut_r_veg_final_sampdat$Species + gut_r_veg_final_sampdat$Patry)
 gut.jacc.dbrda.0 <- dbrda(gut.jacc.dist ~1)
 # split up guts.jacc.geo in gut.jacc.dbrda.full. This allowed me to take out a variable!
 
@@ -165,7 +120,6 @@ gut.jacc.mod.forsel <- ordiR2step(gut.jacc.dbrda.0, scope = gut.jacc.dbrda.full,
 gut.jacc.mod.forsel_results <- gut.jacc.mod.forsel$anova # 
 gut.jacc.mod.forsel_results
 
-# Results 
 # R2.adj Df    AIC      F Pr(>F)    
 # + guts.jacc.env.final$Ord_Cattle_PresenceRank 0.010721  2 877.64 2.0728 0.0001 ***
 #   + gut_r_veg_final_sampdat$Species             0.019945  1 876.75 2.8447 0.0001 ***
@@ -176,7 +130,8 @@ gut.jacc.mod.forsel_results
 #   + guts.jacc.geo.df$centr_X                    0.041466  1 877.17 1.3938 0.0384 *  
 #   + guts.jacc.env.final$Soil.Shann.Avg          0.043605  1 877.67 1.4249 0.0327 *  
 #   + guts.jacc.env.final$Annual.Temp             0.045587  1 878.20 1.3925 0.0396 *  
-#   <All variables>                               0.047685   
+#   + guts.jacc.env.final$Temp.Variability        0.047758  1 878.69 1.4286 0.0322 *  
+#   <All variables>                               0.049899                            
 
 ##### MAKE NEW GEO WITH ONLY THOSE THAT WE JUST FOUND TO BE SIGNIFICANT 
 # (i.e. x, y, and MEM 5)
@@ -193,34 +148,56 @@ set.seed(93)
 # gut_r_veg_final_sampdat[ ,4] = Patry
 
 gut.jacc.fin.dbrda <- dbrda(gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[ ,2] * gut_r_veg_final_sampdat[ ,4] + 
-                              gut_r_veg_final_sampdat$Annual.Precip + gut_r_veg_final_sampdat$Annual.Temp)
+                              gut_r_veg_final_sampdat$Annual.Precip + gut_r_veg_final_sampdat$Annual.Temp + guts.jacc.env.final$Temp.Variability)
 gut.jacc.fin.dbrda.results <- anova.cca(gut.jacc.fin.dbrda, permutations = 9999, by = "margin")
 gut.jacc.fin.dbrda.results 
 summary(gut.jacc.fin.dbrda)
-
+# Model: dbrda(formula = gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[, 2] * gut_r_veg_final_sampdat[, 4] + gut_r_veg_final_sampdat$Annual.Precip + gut_r_veg_final_sampdat$Annual.Temp)
 # Df SumOfSqs      F Pr(>F)    
-# guts.jacc.geo.postsel.mat                                   3    2.024 1.7185 0.0002 ***
-#   guts.jacc.env.final$Soil.Shann.Avg                          1    0.573 1.4609 0.0240 *  
+# guts.jacc.geo.postsel.mat                                   3    2.024 1.7185 0.0001 ***
+#   guts.jacc.env.final$Soil.Shann.Avg                          1    0.573 1.4609 0.0253 *  
 #   guts.jacc.env.final$Ord_Cattle_PresenceRank                 2    1.545 1.9679 0.0001 ***
-#   gut_r_veg_final_sampdat$Annual.Precip                       1    0.669 1.7031 0.0036 ** 
-#   gut_r_veg_final_sampdat$Annual.Temp                         1    0.535 1.3628 0.0483 *  
-#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1    0.857 2.1841 0.0003 ***
-#   Residual                                                  187   73.402  
+#   gut_r_veg_final_sampdat$Annual.Precip                       1    0.669 1.7031 0.0052 ** 
+#   gut_r_veg_final_sampdat$Annual.Temp                         1    0.535 1.3628 0.0484 *  
+#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1    0.857 2.1841 0.0002 ***
+#   Residual                                                  187   73.402                  
+# ---
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# > summary(gut.jacc.fin.dbrda)
+
+
+gut.jacc.fin.dbrda.results 
+# Permutation test for dbrda under reduced model
+# Marginal effects of terms
+# Permutation: free
+# Number of permutations: 9999
+# 
+# Model: dbrda(formula = gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[, 2] * gut_r_veg_final_sampdat[, 4] + gut_r_veg_final_sampdat$Annual.Precip + gut_r_veg_final_sampdat$Annual.Temp + guts.jacc.env.final$Temp.Variability)
+# Df SumOfSqs      F Pr(>F)    
+# guts.jacc.geo.postsel.mat                                   3    2.039 1.7352 0.0001 ***
+#   guts.jacc.env.final$Soil.Shann.Avg                          1    0.630 1.6092 0.0074 ** 
+#   guts.jacc.env.final$Ord_Cattle_PresenceRank                 2    1.529 1.9516 0.0001 ***
+#   gut_r_veg_final_sampdat$Annual.Precip                       1    0.659 1.6814 0.0075 ** 
+#   gut_r_veg_final_sampdat$Annual.Temp                         1    0.567 1.4468 0.0295 *  
+#   guts.jacc.env.final$Temp.Variability                        1    0.541 1.3798 0.0463 *  
+#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1    0.835 2.1312 0.0006 ***
+#   Residual                                                  186   72.862                  
+
 
 vif.gut.jacc.fin.dbrda <- vif.cca(gut.jacc.fin.dbrda)
 vif.gut.jacc.fin.dbrda # Temp, precip, and X and Y have high VIFs. 
 # guts.jacc.geo.postsel.matcentr_X                                          guts.jacc.geo.postsel.matcentr_Y 
-# 8.712686                                                                 17.445004 
+# 9.614222                                                                 36.017668 
 # guts.jacc.geo.postsel.matposMEM_5                                        guts.jacc.env.final$Soil.Shann.Avg 
-# 2.314933                                                                  3.262801 
+# 3.305247                                                                  3.378674 
 # guts.jacc.env.final$Ord_Cattle_PresenceRank.L                             guts.jacc.env.final$Ord_Cattle_PresenceRank.Q 
-# 3.022505                                                                  4.914314 
+# 4.553174                                                                  7.801464 
 # gut_r_veg_final_sampdat[, 2]P.vindex                                      gut_r_veg_final_sampdat[, 4]Sympatry 
-# 10.915804                                                                  9.184720 
+# 12.045446                                                                  9.397523 
 # gut_r_veg_final_sampdat$Annual.Precip                                       gut_r_veg_final_sampdat$Annual.Temp 
-# 12.368661                                                                 21.189978 
-# gut_r_veg_final_sampdat[, 2]P.vindex:gut_r_veg_final_sampdat[, 4]Sympatry 
-# 9.499022 
+# 12.428185                                                                 54.262589 
+# guts.jacc.env.final$Temp.Variability gut_r_veg_final_sampdat[, 2]P.vindex:gut_r_veg_final_sampdat[, 4]Sympatry 
+# 4.307364                                                                 10.410232 
 
 # Investigating a few likely correlations
 precip_long.cor <- cor(guts.jacc.env.final$Annual.Precip, guts.jacc.geo.df$centr_X)
@@ -229,23 +206,41 @@ temp_lat.cor <- cor(guts.jacc.env.final$Annual.Temp, guts.jacc.geo.df$centr_Y)
 temp_lat.cor #-0.8635219! Very high
 
 # REMOVE TEMP AND PRECIP BECAUSE HIGH VIF AND CORR WITH LAT AND LONG
-gut.jacc.fin.dbrda_POSTVIF <- dbrda(gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[ ,2] * gut_r_veg_final_sampdat[ ,4])
+gut.jacc.fin.dbrda_POSTVIF <- dbrda(gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[ ,2] * gut_r_veg_final_sampdat[ ,4] + + guts.jacc.env.final$Temp.Variability)
 vif.gut.jacc.fin.dbrda_POSTVIF <- vif.cca(gut.jacc.fin.dbrda_POSTVIF)
 vif.gut.jacc.fin.dbrda_POSTVIF
 # Now, except for Phanaeus species and "patry", all VIFs are below 3.
+# guts.jacc.geo.postsel.matcentr_X                                          guts.jacc.geo.postsel.matcentr_Y 
+# 2.814403                                                                  3.004592 
+# guts.jacc.geo.postsel.matposMEM_5                                      guts.jacc.env.final$Temp.Variability 
+# 1.317170                                                                  1.510967 
+# guts.jacc.env.final$Soil.Shann.Avg                             guts.jacc.env.final$Ord_Cattle_PresenceRank.L 
+# 2.909812                                                                  1.225509 
+# guts.jacc.env.final$Ord_Cattle_PresenceRank.Q                                      gut_r_veg_final_sampdat[, 2]P.vindex 
+# 2.304351                                                                 10.973212 
+# gut_r_veg_final_sampdat[, 4]Sympatry gut_r_veg_final_sampdat[, 2]P.vindex:gut_r_veg_final_sampdat[, 4]Sympatry 
+# 7.533435                                                                  9.554460 
 
 # Test significance of constraints
 set.seed(93)                            
 gut.jacc.fin.dbrda_POSTVIF.results <- anova.cca(gut.jacc.fin.dbrda, permutations = 9999, by = "margin")
 gut.jacc.fin.dbrda_POSTVIF.results
 
-# guts.jacc.geo.postsel.mat                                   3    2.024 1.7185 0.0002 ***
-#   guts.jacc.env.final$Soil.Shann.Avg                          1    0.573 1.4609 0.0240 *  
-#   guts.jacc.env.final$Ord_Cattle_PresenceRank                 2    1.545 1.9679 0.0001 ***
-#   gut_r_veg_final_sampdat$Annual.Precip                       1    0.669 1.7031 0.0036 ** 
-#   gut_r_veg_final_sampdat$Annual.Temp                         1    0.535 1.3628 0.0483 *  
-#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1    0.857 2.1841 0.0003 ***
-#   Residual                                                  187   73.402           
+# Permutation test for dbrda under reduced model
+# Marginal effects of terms
+# Permutation: free
+# Number of permutations: 9999
+# 
+# Model: dbrda(formula = gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[, 2] * gut_r_veg_final_sampdat[, 4] + gut_r_veg_final_sampdat$Annual.Precip + gut_r_veg_final_sampdat$Annual.Temp + guts.jacc.env.final$Temp.Variability)
+# Df SumOfSqs      F Pr(>F)    
+# guts.jacc.geo.postsel.mat                                   3    2.039 1.7352 0.0001 ***
+#   guts.jacc.env.final$Soil.Shann.Avg                          1    0.630 1.6092 0.0090 ** 
+#   guts.jacc.env.final$Ord_Cattle_PresenceRank                 2    1.529 1.9516 0.0001 ***
+#   gut_r_veg_final_sampdat$Annual.Precip                       1    0.659 1.6814 0.0042 ** 
+#   gut_r_veg_final_sampdat$Annual.Temp                         1    0.567 1.4468 0.0286 *  
+#   guts.jacc.env.final$Temp.Variability                        1    0.541 1.3798 0.0448 *  
+#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1    0.835 2.1312 0.0007 ***
+#   Residual                                                  186   72.862                                                      187   73.402           
 
 # What if we took out the interaction effect?
 gut.jacc.fin.noint.dbrda <- dbrda(gut.jacc.dist ~ guts.jacc.geo.postsel.mat + guts.jacc.env.final$Soil.Shann.Avg + guts.jacc.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[ ,2] + gut_r_veg_final_sampdat[ ,4])
@@ -253,81 +248,16 @@ vif.gut.jacc.fin.noint.dbrda <- vif.cca(gut.jacc.fin.noint.dbrda) #now all 5 or 
 
 #### what if we did varpart on this model? #####
 ### July 1 #####
-final.jacc.guts.dbrda.varpart <- varpart(gut.jacc.dist, as.data.frame(guts.jacc.geo.postsel.mat), as.data.frame(guts.jacc.env.final[,3:4]), as.data.frame(gut_r_veg_final_sampdat[ ,2]), as.data.frame(gut_r_veg_final_sampdat[ ,4]) )
+# final.jacc.guts.dbrda.varpart <- varpart(gut.jacc.dist, as.data.frame(guts.jacc.geo.postsel.mat), as.data.frame(guts.jacc.env.final[,c(2,4)]), as.data.frame(gut_r_veg_final_sampdat[ ,2]), as.data.frame(gut_r_veg_final_sampdat[ ,4]) )
+# Nov. 28th-- needed  cattle, precip, both temps, and soil shannon
+final.jacc.guts.dbrda.varpart <- varpart(gut.jacc.dist, as.data.frame(guts.jacc.geo.postsel.mat), as.data.frame(guts.jacc.env.final), as.data.frame(gut_r_veg_final_sampdat[ ,2]), as.data.frame(gut_r_veg_final_sampdat[ ,4]) )
 
 par(mfrow = c(1,2))
-quartz()
-final.jacc.dbrda.vp.plot <-plot(final.jacc.guts.dbrda.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Env", "Species", "Patry"), id.size = 1.2) 
+#quartz()
+plot(final.jacc.guts.dbrda.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Env", "Species", "Patry"), id.size = 1.2) 
 #### nothing too interesting here #####
 
-
-####### WEIGHTED UNIFRAC #########
-######## 1. MODEL SELECTION USING ALL PRE-SELECTED ENV AND GEO VARIABLES, AS WELL AS BIOTIC VARS OF INTEREST ##########
-
-colnames(gut_r_veg_final_sampdat) #col ten is beetle mass, col 2 is beetle species, and col 4 is patry
-colnames(guts.wUF.env.final)
-
-guts.wUF.geo.df <- as.data.frame(guts.wUF.geo) 
-class(guts.wUF.geo.df)
-colnames(guts.wUF.geo.df)
-
-set.seed(93)
-guts.wUF.dbrda.full <- dbrda(guts.wUF.dist ~ guts.wUF.geo.df$centr_X + guts.wUF.geo.df$centr_Y + guts.wUF.env.final$Annual.Temp + guts.wUF.env.final$Annual.Precip + guts.wUF.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat$BeetleMass + gut_r_veg_final_sampdat$Species + gut_r_veg_final_sampdat$Patry)
-guts.wUF.dbrda.0 <- dbrda(guts.wUF.dist ~1)
-
-guts.wUF.dbrda.full.vif <- vif.cca(guts.wUF.dbrda.full)
-guts.wUF.dbrda.full.vif #starting out: Y and temp are 10.XX, annual precip is 12.09. rest are below 10, all but one below 4
-# guts.wUF.geo.df$centr_X                      guts.wUF.geo.df$centr_Y               guts.wUF.env.final$Annual.Temp 
-# 8.265457                                    10.253893                                    10.822822 
-# guts.wUF.env.final$Annual.Precip guts.wUF.env.final$Ord_Cattle_PresenceRank.L guts.wUF.env.final$Ord_Cattle_PresenceRank.Q 
-# 10.262620                                     2.182291                                     3.248096 
-# gut_r_veg_final_sampdat$BeetleMass      gut_r_veg_final_sampdat$SpeciesP.vindex        gut_r_veg_final_sampdat$PatrySympatry 
-# 1.253658                                     1.642819                                     2.038842 
-
-set.seed(93)
-gut.wUF.mod.forsel <- ordiR2step(guts.wUF.dbrda.0, scope = guts.wUF.dbrda.full, permutations = 9999)
-gut.wUF.mod.forsel_results <- gut.wUF.mod.forsel$anova # 
-gut.wUF.mod.forsel_results 
-
-# Results show importance of long, patry, cattle, species
-# R2.adj Df    AIC      F Pr(>F)    
-# + guts.wUF.geo.df$centr_Y                    0.016378  1 468.99 4.2968 0.0008 ***
-#   + gut_r_veg_final_sampdat$Patry              0.028323  1 467.55 3.4217 0.0050 ** 
-#   + guts.wUF.env.final$Ord_Cattle_PresenceRank 0.037523  2 467.62 1.9368 0.0313 *  
-#   + gut_r_veg_final_sampdat$Species            0.044687  1 467.10 2.4548 0.0314 *  
-#   <All variables>                              0.051245 
-
-##### MAKE NEW GEO WITH ONLY THOSE THAT WE JUST FOUND TO BE SIGNIFICANT (just Y)
-guts.wUF.geo.postsel <- guts.wUF.geo.df[,2]
-colnames(guts.wUF.geo.postsel)
-class(guts.wUF.geo.postsel)
-guts.wUF.geo.postsel.mat <- as.matrix(guts.wUF.geo.postsel)
-
-###### MAKE DBRDA MODEL ######
-set.seed(93) 
-gut.wUF.fin.dbrda <- dbrda(guts.wUF.dist ~ guts.wUF.geo.postsel.mat +guts.wUF.env.final$Ord_Cattle_PresenceRank + gut_r_veg_final_sampdat[ ,2] * gut_r_veg_final_sampdat[ ,4])
-gut.wUF.fin.dbrda.results <- anova.cca(gut.wUF.fin.dbrda, permutations = 9999, by = "margin")
-gut.wUF.fin.dbrda.results #
-# LONG AND CATTLE--- NOT INTERACTION EFFECT
-# Df SumOfSqs      F Pr(>F)  
-# guts.wUF.geo.postsel.mat                                    1   0.1365 2.6657 0.0194 *
-#   guts.wUF.env.final$Ord_Cattle_PresenceRank                  2   0.1956 1.9098 0.0343 *
-#   gut_r_veg_final_sampdat[, 2]:gut_r_veg_final_sampdat[, 4]   1   0.0623 1.2169 0.2693  
-# Residual                                                  192   9.8322    
-
-###### CHECK VIFS #######
-vif.gut.WUF.fin.dbrda <- vif.cca(gut.wUF.fin.dbrda)
-vif.gut.WUF.fin.dbrda # all below 10 (other than interaction effect and patry/species, all below 4).
-# Thus, since VIFs are good, I'll keep this model.
-
-colnames(guts.wUF.env.final)
-
-#### what if we did varpart on this model? #####
-final.guts.wUFdbrda.varpart <- varpart(guts.wUF.dist, as.data.frame(guts.wUF.geo.postsel.mat), as.data.frame(guts.wUF.env.final[,2:3]), as.data.frame(gut_r_veg_final_sampdat[ ,2]), as.data.frame(gut_r_veg_final_sampdat[ ,4]) )
-
-par(mfrow = c(1,2))
-quartz()
-final.guts.dbrda.vp.plot <-plot(final.guts.dbrda.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Env", "Species", "Patry"), id.size = 1.2) 
+plot(final.guts.dbrda.varpart, digits = 3, bg = c("yellow", "navyblue", "red", "lightblue"), Xnames = c("Geo.", "Env", "Species", "Patry"), id.size = 1.2) 
 #### nothing too interesting here #####
 
 # SAVE ALL OF THE RESULTS FOR ALL OF THE GUTS CONSIDERED TOGETHER
@@ -336,7 +266,11 @@ final.guts.dbrda.vp.plot <-plot(final.guts.dbrda.varpart, digits = 3, bg = c("ye
 #      gut.jacc.varpart, gut.wUF.varpart, gut.jacc.mod.forsel, gut.jacc.mod.forsel_results, guts.jacc.geo.postsel.mat, gut.jacc.fin.dbrda, gut.jacc.fin.dbrda.results, vif.gut.jacc.fin.dbrda,
 #      gut.jacc.fin.dbrda_POSTVIF, vif.gut.jacc.fin.dbrda_POSTVIF, gut.jacc.fin.dbrda_POSTVIF.results, guts.wUF.dbrda.full.vif, gut.wUF.mod.forsel, gut.wUF.mod.forsel_results, guts.wUF.geo.postsel.mat, 
 #      gut.wUF.fin.dbrda, gut.wUF.fin.dbrda.results, final.guts.wUFdbrda.varpart, file= "dbRDAsVarPart_allGuts.RData")
+# # SAVED NOV. 28, 2023
+# save(guts.jacc.geo, guts.jacc.env.for.sel, guts.jacc.env.for.sel.results, guts.jacc.env.final,gut.jacc.varpart, gut.jacc.mod.forsel, gut.jacc.mod.forsel_results, guts.jacc.geo.postsel.mat, gut.jacc.fin.dbrda, gut.jacc.fin.dbrda.results, vif.gut.jacc.fin.dbrda,
+#      gut.jacc.fin.dbrda_POSTVIF, vif.gut.jacc.fin.dbrda_POSTVIF, gut.jacc.fin.dbrda_POSTVIF.results, file= "dbRDAsVarPart_allGutsNov28_2023.RData")
 
+### STOPPED HERE, NOV. 28, 2023 ####
 ################### SEPARATE MODELS FOR PV AND PD ###################
 # BECAUSE WE FOUND AN INTERACTION EFFECT BETWEEN SPECIES AND PATRY, WE WANT TO RUN MODELS FOR PV AND PD SEPARATELY
 
