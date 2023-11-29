@@ -3,7 +3,7 @@
 #               Phan Biogeo 2019 Project
 #  #(THIS SCRIPT FOLLOWS the script called Rarefy_Shannon_dissimilarities_final.R)
 ##################################################################
-###### CHECKING MAY 30, 2022 #######
+# All results are the same APRIL 3, 2023 and Nov. 28 unless otherwise mentioned
 # Description: This script performs distance-based Moran's eigenvector map models. Specifically, it
 # separately examines potential interpopulation structure separately in P. vindex, P. difformis, 
 # and all beetles (i.e. both species) together. Importantly, we only ended up using the interpopulation
@@ -76,7 +76,7 @@ rownames(guts_centr_coord) <- allgutscoordxy.file[,1]
 
 ###### POSITIVE DBMEMS ######
 # CONSTRUCT POSITIVE ONLY DBMEM MODEL ON COORDS 
-PV.AmPop.pos.dbmem <- dbmem(PV_centr_coord, silent = FALSE, MEM.autocor = "positive") # non-null displays both positive and negative
+PV.AmPop.pos.dbmem <- dbmem(PV_centr_coord, silent = FALSE, MEM.autocor = "positive") # non-null displays both positive and negative eigenvalues
 
 # DISPLAY EIGENVALUES
 attributes(PV.AmPop.pos.dbmem)$values # only 3 positive: ***** 0.18887325 0.10566015 0.01454909
@@ -152,84 +152,29 @@ PV.AmPop.jacc.neg.forsel.results <- PV.AmPop.jacc.neg.forsel$anova # significant
 #   + MEM70         0.079068  1 320.54 1.4525 0.0267 *  
 #   <All variables> 0.228707                            
 # ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1                    
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1    
+
+# Nov. 28, 2023:
+# > PV.AmPop.jacc.neg.forsel$anova
+# R2.adj Df    AIC      F Pr(>F)   
+# + MEM85         0.010093  1 317.83 1.8972 0.0029 **
+#   + MEM4          0.016602  1 318.21 1.5758 0.0116 * 
+#   + MEM84         0.021670  1 318.71 1.4455 0.0332 * 
+#   + MEM6          0.026829  1 319.19 1.4506 0.0323 * 
+#   + MEM50         0.031562  1 319.69 1.4105 0.0397 * 
+#   + MEM56         0.036058  1 320.20 1.3871 0.0458 * 
+#   <All variables> 0.228707                          
 
 # APPLY SIDAK CORRECTION
-library(mutoss)
 PV.jacc.AmPop.final <- sidak(pValues= PV.AmPop.jacc.neg.forsel$anova$`Pr(>F)`)
 #  0.005539739 0.041035538
 # #***** April 3, 2023 :  [1] 0.034250271 0.009557872 0.017852240 0.059512191 0.107147161 0.106064970 0.186959797 0.172953703 0.307872417 0.257447295
 # [11] 0.277295630          NA
+# Nov. 28, 2023: 
+# [1] 0.02012424 0.07842824 0.21049208 0.20533298 0.24690719 0.27976224         NA
 
-
-########## (PV) wUniFrac #########
-
-# 1. CHECK FOR LINEAR TREND AND DETREND DATA
-set.seed(93)
-PV.wUF.AmPop.detrend.mod <-dbrda(PV.wUF.dist~PV_centr_coord[,1]+PV_centr_coord[,2])
-PV.wUF.AmPop.detrend.mod.results <- anova.cca(PV.wUF.AmPop.detrend.mod, permutations=9999) #3e-04 ***
-# April 3,2023 *****:3.4452  3e-04 ***
-
-PV.wUF.AmPop.dt.dat<-resid(PV.wUF.AmPop.detrend.mod)
-PV.wUF.AmPop.dt.dat
-
-
-# RUN POS DBMEM ANALYSIS ON DETRENDED DATA
-set.seed(93)
-PV.AmPop.wUF.pos.dbmem.dbrda <- dbrda(PV.wUF.AmPop.dt.dat ~ as.matrix(PV.AmPop.pos.dbmem))
-PV.AmPop.wUF.pos.dbmem.dbrda.results <- anova.cca(PV.AmPop.wUF.pos.dbmem.dbrda, permutations=9999)
-PV.AmPop.wUF.pos.dbmem.dbrda.results # NOT SIGNIFICANT, so we don't continue with this
-# APRIL 3, 2023: 
-# ***** 0.8702 0.6025
-
-# RUN NEG DBMEM ANALYSIS ON DETRENDED DATA
-set.seed(93)
-PV.AmPop.wUF.neg.dbmem.dbrda <- dbrda(PV.wUF.AmPop.dt.dat ~ as.matrix(PV.AmPop.neg.dbmem))
-PV.AmPop.wUF.neg.dbmem.dbrda.results <- anova.cca(PV.AmPop.wUF.neg.dbmem.dbrda, permutations=9999)
-PV.AmPop.wUF.neg.dbmem.dbrda.results # Pr(>F)= 3e-04 *** QUITE SIGNIFICANT!
-# ***** April 3, 2023 : NOT SIGNIFICANT: 0.3978
-
-# ***** # ALL OF THIS IS GRAYED OUT SINCE NEGATIVE NO LONGER SIGNIFICANT!! *****
-# # FORWARD MODEL SELECTION USING NEGATIVE EIGENVECTORS
-
+# Nov. 28, 2023 shows that only MEM85 should be kept, since its p-value is  0.02012424 and all the rest are above threshold
 # 
-# # FIRST MAKE A MODEL WITH INTERCEPT ONLY
-# set.seed(93)
-# PV.AmPop.wUF.neg.dbmem.dbrda.0 <- dbrda(PV.wUF.AmPop.dt.dat ~ 1, data = PV.AmPop.neg.dbmem)
-# 
-# # MAKE A MODEL WITH ALL POTENTIAL MEMS.
-# # If I didn't make this super explicit using ~. (i.e. if I fed PV.AmPop.neg.dbmem.dbrda into "scope" of ordiR2step, it wouldn't
-# # do model sel across each MEM individually)
-# set.seed(93)
-# PV.AmPop.wUF.neg.dbmem.dbrda.all <- dbrda(PV.wUF.AmPop.dt.dat ~ ., data = PV.AmPop.neg.dbmem)
-# 
-# 
-# # MODEL SELECTION
-# set.seed(93)
-# PV.AmPop.wUF.neg.forsel <- ordiR2step(PV.AmPop.wUF.neg.dbmem.dbrda.0, scope = PV.AmPop.wUF.neg.dbmem.dbrda.all, permutations =9999)
-# PV.AmPop.wUF.neg.forsel.results <- PV.AmPop.wUF.neg.forsel$anova # MEM7, MEM4, and MEM8 are significant KEEP THESE?
-# # March 2, 2023 :
-# # > PV.AmPop.wUF.neg.forsel.results
-# # R2.adj Df    AIC      F Pr(>F)  
-# # + MEM84         0.019758  1 135.71 2.7737 0.0145 *
-# #   + MEM51         0.034220  1 135.36 2.3028 0.0354 *
-# #   + MEM52         0.048994  1 134.95 2.3360 0.0358 *
-# #   + MEM59         0.063866  1 134.49 2.3504 0.0279 *
-# #   + MEM50         0.077603  1 134.11 2.2510 0.0378 *
-# #   <All variables> 0.125928                 
-
-# # APPLY SIDAK CORRECTION
-# library(mutoss)
-# sidak(pValues= PV.AmPop.neg.forsel$anova$`Pr(>F)`)
-# PV.wUF.AmPop.final <-sidak(pValues= PV.AmPop.wUF.neg.forsel$anova$`Pr(>F)`) # After corrrection: 0.1176970 0.1168227 0.1757102 NONE ARE SIGNIFICANT
-# # March 3, 2023:
-# # > PV.wUF.AmPop.final
-# # $adjPValues
-# # [1] 0.08390656 0.19446661 0.19646877 0.15614921 0.20641744         NA
-# 
-# # ***** # ALL OF THIS IS GRAYED OUT SINCE NEGATIVE NO LONGER SIGNIFICANT!! *****
-# # ***** CAN DELETE ABOVE THIS LINE
-
 ########################## P. DIFFORMIS ##########################
 
 ######## CONSTRUCT DBMEMS ON CENTROID COORDS OF P. DIFFORMIS #########
@@ -256,7 +201,7 @@ attributes(PD.AmPop.neg.dbmem)$values
 set.seed(93)
 PD.jacc.AmPop.detrend.mod <- dbrda(PD.jacc.dist~PD_centr_coord[,1]+PD_centr_coord[,2])
 PD.jacc.AmPop.detrend.mod.results <- anova.cca(PD.jacc.AmPop.detrend.mod, permutations=9999) # Pr(>F) = 0.00042 ***
-# ****** April 3, 2023:  3e-04 ***
+# ****** April 3, 2023:  F= 1.7083, P = 3e-04 ***
 
 PD.jacc.AmPop.dt.dat<-resid(PD.jacc.AmPop.detrend.mod)
 PD.jacc.AmPop.dt.dat
@@ -266,14 +211,14 @@ set.seed(93)
 PD.AmPop.jacc.pos.dbmem.dbrda <- dbrda(PD.jacc.AmPop.dt.dat ~ as.matrix(PD.AmPop.pos.dbmem))
 PD.AmPop.jacc.pos.dbmem.dbrda.results <- anova.cca(PD.AmPop.jacc.pos.dbmem.dbrda, permutations=9999)
 PD.AmPop.jacc.pos.dbmem.dbrda.results #  Pr(>F)= 0.2014 NOT SIGNIFICANT
-# ***** April 3, 2023: SIGNIFICANT 0.0062 **
+# ***** April 3, 2023: SIGNIFICANT 0.0062 **, F= 1.2804 
 
 # RUN NEG DBMEM ANALYSIS ON DETRENDED DATA
 set.seed(93)
 PD.AmPop.jacc.neg.dbmem.dbrda <- dbrda(PD.jacc.AmPop.dt.dat ~ as.matrix(PD.AmPop.neg.dbmem))
 PD.AmPop.jacc.neg.dbmem.dbrda.results <- anova.cca(PD.AmPop.jacc.neg.dbmem.dbrda, permutations=9999)
 PD.AmPop.jacc.neg.dbmem.dbrda.results # OLD RESULTS: Pr(>F)= 1e-05 *** VERY SIGNIFICANT!
-# ****** And april 4, 2023 MARCH 3, 2023: NOT SIGNIFICANT: 0.9939
+# ****** And April 4, 2023 MARCH 3, 2023: NOT SIGNIFICANT: 0.9939, F =  0.781
 
 # ***** NEW MOD SELECTION WITH POSITIVE
 # FIRST MAKE A MODEL WITH INTERCEPT ONLY
@@ -296,108 +241,8 @@ PD.AmPop.jacc.pos.forsel.results #*****  R2.adj Df    AIC      F Pr(>F)
 
 # APPLY SIDAK CORRECTION
 library(mutoss)
-PD.jacc.AmPop.final <- sidak(pValues= PD.AmPop.jacc.neg.forsel$anova$`Pr(>F)`)
-PD.jacc.AmPop.final # three out of the four are significant
-
-# # FORWARD MODEL SELECTION USING NEGATIVE EIGENVECTORS
-# #***** GRAYED OUT SINCE NO LONGER SIGNIFICANT
-# # FIRST MAKE A MODEL WITH INTERCEPT ONLY
-# set.seed(93)
-# PD.AmPop.jacc.neg.dbmem.dbrda.0 <- dbrda(PD.jacc.AmPop.dt.dat ~ 1, data = PD.AmPop.neg.dbmem)
-# 
-# # MAKE A MODEL WITH ALL POTENTIAL MEMS.
-# # If I didn't make this super explicit using ~. (i.e. if I fed PD.AmPop.neg.dbmem.dbrda into "scope" of ordiR2step, it wouldn't
-# # do model sel across each MEM individually)
-# set.seed(93)
-# PD.AmPop.jacc.neg.dbmem.dbrda.all <- dbrda(PD.jacc.AmPop.dt.dat ~ ., data = PD.AmPop.neg.dbmem)
-# 
-# # MODEL SELECTION
-# set.seed(93)
-# PD.AmPop.jacc.neg.forsel <- ordiR2step(PD.AmPop.jacc.neg.dbmem.dbrda.0, scope = PD.AmPop.jacc.neg.dbmem.dbrda.all, permutations =9999)
-# PD.AmPop.jacc.neg.forsel.results <- PD.AmPop.jacc.neg.forsel$anova # MEM2, 4, 6, and 3. r2 for all is 0.0265738
-# 
-# # APPLY SIDAK CORRECTION
-# library(mutoss)
-# PD.jacc.AmPop.final <- sidak(pValues= PD.AmPop.jacc.neg.forsel$anova$`Pr(>F)`)
-# PD.jacc.AmPop.final # three out of the four are significant
-# ***** GRAYED OUT SINCE NO LONGER SIGNIFICANT
-
-########## (PD) wUniFrac #########
-
-# 1. CHECK FOR LINEAR TREND AND DETREND DATA
-set.seed(93)
-PD.wUF.AmPop.detrend.mod <-dbrda(PD.wUF.dist~PD_centr_coord[,1]+PD_centr_coord[,2])
-PD.wUF.AmPop.detrend.mod.results <- anova.cca(PD.wUF.AmPop.detrend.mod, permutations=9999) # Pr(>F) = 0.1516 NOT SIGNIFICANT
-# April 3, 2023: STILL NOT SIGNFICANT: 1.4219 0.1498
-
-##### RAN WITH DETRENDED BELOW, HASEHD IT OUT AND RAN ON REGULAR DATA BECAUSE LINEAR TREND NOT SIGNIFICANT
-#PD.wUF.AmPop.dt.dat<-resid(PD.wUF.AmPop.detrend.mod)
-#PD.wUF.AmPop.dt.dat
-
-## RUN POS DBMEM ANALYSIS ON DETRENDED DATA
-#set.seed(93)
-#PD.AmPop.wUF.pos.dbmem.dbrda.dt <- dbrda(PD.wUF.AmPop.dt.dat ~ as.matrix(PD.AmPop.pos.dbmem))
-#PD.AmPop.wUF.pos.dbmem.dbrda.dt.results <- anova.cca(PD.AmPop.wUF.pos.dbmem.dbrda.dt, permutations=9999)
-#PD.AmPop.wUF.pos.dbmem.dbrda.dt.results #  Pr(>F)= 0.064 NOT SIGNIFICANT, BUT CLOSE
-
-# RUN NEG DBMEM ANALYSIS ON DETRENDED DATA
-#set.seed(93)
-#PD.AmPop.wUF.neg.dbmem.dbrda.dt <- dbrda(PD.wUF.AmPop.dt.dat ~ as.matrix(PD.AmPop.neg.dbmem))
-#PD.AmPop.wUF.neg.dbmem.dbrda.dt.results <- anova.cca(PD.AmPop.wUF.neg.dbmem.dbrda.dt, permutations=9999)
-#PD.AmPop.wUF.neg.dbmem.dbrda.dt.results # Pr(>F)= 0.3284, NOT SIGNIFICANT
-
-
-# FORWARD MODEL SELECTION USING NEGATIVE EIGENVECTORS
-
-# FIRST MAKE A MODEL WITH INTERCEPT ONLY
-#set.seed(93)
-#PD.AmPop.wUF.neg.dbmem.dbrda.dt.0 <- dbrda(PD.wUF.AmPop.dt.dat ~ 1, data = PD.AmPop.neg.dbmem)
-
-# MAKE A MODEL WITH ALL POTENTIAL MEMS.
-# If I didn't make this super explicit using ~. (i.e. if I fed PD.AmPop.neg.dbmem.dbrda into "scope" of ordiR2step, it wouldn't
-# do model sel across each MEM individually)
-#set.seed(93)
-#PD.AmPop.wUF.neg.dbmem.dbrda.dt.all <- dbrda(PD.wUF.AmPop.dt.dat ~ ., data = PD.AmPop.neg.dbmem)
-
-# MODEL SELECTION
-#set.seed(93)
-#PD.AmPop.wUF.dt.neg.forsel <- ordiR2step(PD.AmPop.wUF.neg.dbmem.dbrda.0, scope = PD.AmPop.wUF.neg.dbmem.dbrda.all, permutations =9999)
-#PD.AmPop.wUF.dt.neg.forsel.results <- PD.AmPop.wUF.neg.forsel$anova # NULL SO DID NOT APPLY SIDAK
-
-# RUN POS DBMEM ANALYSIS ON full DATA
-set.seed(93)
-PD.AmPop.wUF.pos.dbmem.Ndet.dbrda <- dbrda(PD.wUF.dist ~ as.matrix(PD.AmPop.pos.dbmem))
-PD.AmPop.wUF.pos.dbmem.Ndet.dbrda.results <- anova.cca(PD.AmPop.wUF.pos.dbmem.Ndet.dbrda, permutations=9999)
-PD.AmPop.wUF.pos.dbmem.Ndet.dbrda.results #  Pr(>F)= 0.00375 ** SIGNIFICANT
-# MARCH 3: same result, 0.0036 **
-
-# RUN NEG DBMEM ANALYSIS ON full DATA
-set.seed(93)
-PD.AmPop.wUF.neg.dbmem.Ndet.dbrda <- dbrda(PD.wUF.dist ~ as.matrix(PD.AmPop.neg.dbmem))
-PD.AmPop.wUF.neg.dbmem.Ndet.dbrda.results <- anova.cca(PD.AmPop.wUF.neg.dbmem.Ndet.dbrda, permutations=9999)
-PD.AmPop.wUF.neg.dbmem.Ndet.dbrda.results # Pr(>F)=  0.25 INSIGNIFICANT
-# MARCH 3, 2023: STILL INSIGNFICANT: 0.9965
-
-# FORWARD MODEL SELECTION USING POSITIVE EIGENVECTORS
-
-# FIRST MAKE A MODEL WITH INTERCEPT ONLY
-set.seed(93)
-PD.AmPop.wUF.pos.Ndet.dbmem.dbrda.0 <- dbrda(PD.wUF.dist ~ 1, data = PD.AmPop.pos.dbmem)
-
-# MAKE A MODEL WITH ALL POTENTIAL pos MEMS.
-set.seed(93)
-PD.AmPop.wUF.pos.Ndet.dbmem.dbrda.all <- dbrda(PD.wUF.dist ~ ., data = PD.AmPop.pos.dbmem)
-
-# MODEL SELECTION
-set.seed(93)
-PD.AmPop.wUF.pos.Ndet.forsel <- ordiR2step(PD.AmPop.wUF.pos.Ndet.dbmem.dbrda.0, scope = PD.AmPop.wUF.pos.Ndet.dbmem.dbrda.all, permutations =9999)
-PD.AmPop.wUF.pos.Ndet.forsel.results <- PD.AmPop.wUF.pos.Ndet.forsel$anova # 
-PD.AmPop.wUF.pos.Ndet.forsel.results #ONLY MEM 2 Pr(>F): 0.00035 ***
-# march 3, 2023: same result: 9e-04 *** # ***** same result April 3, 2023
-
-# APPLY SIDAK CORRECTION
-PD.wUF.AmPop.Ndet.final <- sidak(pValues= PD.AmPop.wUF.pos.Ndet.forsel$anova$`Pr(>F)`)
-PD.wUF.AmPop.Ndet.final #0.0006998775 
+PD.jacc.AmPop.final <- sidak(pValues= PD.AmPop.jacc.pos.forsel$anova$`Pr(>F)`)
+PD.jacc.AmPop.final # MEM 5 is significant (P= 0.00239856)
 
 ########################## ALL GUT SAMPLES ##########################
 
@@ -409,20 +254,7 @@ guts.AmPop.pos.dbmem <- dbmem(guts_centr_coord, silent = FALSE, MEM.autocor = "p
 guts.AmPop.pos.dbmem.thresh <- give.thresh(dist(guts_centr_coord))
 guts.AmPop.pos.dbmem.thresh #337.2224
 
-##### THIS LITTLE BIT IS JUST CHECKING CALCULATIONS #####
-set.seed(1)
-guts.AmPop.pos.dbmem1 <- dbmem(guts_centr_coord, silent = FALSE, MEM.autocor = "positive")
-set.seed(93)
-guts.AmPop.pos.dbmem93 <- dbmem(guts_centr_coord, silent = FALSE, MEM.autocor = "positive")
-set.seed(2)
-guts.AmPop.pos.dbmem2 <- dbmem(guts_centr_coord, silent = FALSE, MEM.autocor = "positive")
-
-unique(guts.AmPop.pos.dbmem1 == guts.AmPop.pos.dbmem2) #all true 
-unique(guts.AmPop.pos.dbmem93 == guts.AmPop.pos.dbmem2) #all true 
-
 unique(guts_centr_coord)
-
-########################
 
 # DISPLAY EIGENVALUES
 attributes(guts.AmPop.pos.dbmem)$values # 
@@ -439,9 +271,10 @@ attributes(guts.AmPop.neg.dbmem)$values
 
 # 1. CHECK FOR LINEAR TREND AND DETREND DATA
 set.seed(93)
-guts.jacc.AmPop.detrend.mod <-dbrda(gut.jacc.dist~guts_centr_coord[,1]+guts_centr_coord[,2])
+guts.jacc.AmPop.detrend.mod <-dbrda(gut.jacc.dist~guts_centr_coord[,1]+guts_centr_coord[,2]) #this is on geodetic lat/long
 guts.jacc.AmPop.detrend.mod.results <- anova.cca(guts.jacc.AmPop.detrend.mod, permutations=9999) # very significant linear trend
 # March 3, 2023 AND APRIL 4, 2023 *****: SAME OVERALL 1e-04 *** 
+# F = 1.8668
 
 # detrend data
 guts.jacc.AmPop.dt.dat<-resid(guts.jacc.AmPop.detrend.mod) #save residuals 
@@ -452,7 +285,7 @@ set.seed(93)
 guts.AmPop.jacc.pos.dbmem.dbrda <- dbrda(guts.jacc.AmPop.dt.dat ~ as.matrix(guts.AmPop.pos.dbmem))
 guts.AmPop.jacc.pos.dbmem.dbrda.results <- anova.cca(guts.AmPop.jacc.pos.dbmem.dbrda, permutations=9999)
 guts.AmPop.jacc.pos.dbmem.dbrda.results #  Pr(>F)= 0.6997 NOT SIGNIFICANT **May 30, 2022- 0.00241 **
-# April and ***** March 3, 2023: SIGNIFICANT: 0.0019 **
+# April and ***** March 3, 2023: SIGNIFICANT: 0.0019 ** AND NOV. F= 1.2486 P=0.0019 **
 
 # RUN NEG DBMEM ANALYSIS ON DETRENDED DATA
 set.seed(93)
@@ -460,6 +293,12 @@ guts.AmPop.jacc.neg.dbmem.dbrda <- dbrda(guts.jacc.AmPop.dt.dat ~ as.matrix(guts
 guts.AmPop.jacc.neg.dbmem.dbrda.results <- anova.cca(guts.AmPop.jacc.neg.dbmem.dbrda, permutations=9999)
 guts.AmPop.jacc.neg.dbmem.dbrda.results # Pr(>F)= 1e-05 *** SIGNIFICANT ** May 30, 2022 - 0.9976
 # and april 4, 2023 ***** March 3, 2023: NOT SIGNIFICANT 0.9982
+#Number of permutations: 9999
+
+# Model: dbrda(formula = guts.jacc.AmPop.dt.dat ~ as.matrix(guts.AmPop.neg.dbmem))
+# Df SumOfSqs      F Pr(>F)
+# Model    191   76.895 0.8009 0.9982
+# Residual   7    3.519 
 ############################################################################################################
 #### ADD MAY 30, 2022 TRYING MODEL SELECTION WITH POSITIVE EIGENVECTORS
 
@@ -475,125 +314,19 @@ guts.AmPop.jacc.pos.dbmem.dbrda.all <- dbrda(guts.jacc.AmPop.dt.dat ~ ., data = 
 set.seed(93) #CHANGE TO MORE PERMUTATIONS IF NECESSARY
 guts.AmPop.jacc.pos.forsel <- ordiR2step(guts.AmPop.jacc.pos.dbmem.dbrda.0, scope = guts.AmPop.jacc.pos.dbmem.dbrda.all, permutations =9999)
 guts.AmPop.jacc.pos.forsel.results <- guts.AmPop.jacc.pos.forsel$anova 
-guts.AmPop.jacc.pos.forsel$adjust #1
+# RESULTS SAVED FROM NOV. 2023
+# R2.adj Df    AIC      F Pr(>F)   
+# + MEM7          0.0035188  1 874.34 1.6992 0.0045 **
+#   + MEM5          0.0065465  1 874.72 1.6004 0.0077 **
+#   + MEM4          0.0086365  1 875.28 1.4132 0.0387 * 
+#   <All variables> 0.0087131                           
+# ---
 
 # APPLY SIDAK CORRECTION
 library(mutoss)
 guts.jacc.AmPop.pos.final <- sidak(pValues= guts.AmPop.jacc.pos.forsel$anova$`Pr(>F)`)
 guts.jacc.AmPop.pos.final #[1] 0.01787886 0.03044608 0.14604346         NA (these are mems7, 5, and 4)
 ###########END MAY 30 additions #################################################################################################
-
-# ***** APRIL 4, 2023 GRAYED OUT SINCE NEGATIVE NO LONGER SIGNIFICANT!
-# FORWARD MODEL SELECTION USING NEGATIVE EIGENVECTORS
-
-# # FIRST MAKE A MODEL WITH INTERCEPT ONLY
-# set.seed(93)
-# guts.AmPop.jacc.neg.dbmem.dbrda.0 <- dbrda(guts.jacc.AmPop.dt.dat ~ 1, data = guts.AmPop.neg.dbmem)
-# 
-# # MAKE A MODEL WITH ALL POTENTIAL MEMS.
-# set.seed(93)
-# guts.AmPop.jacc.neg.dbmem.dbrda.all <- dbrda(guts.jacc.AmPop.dt.dat ~ ., data = guts.AmPop.neg.dbmem)
-# 
-# # MODEL SELECTION
-# set.seed(93)
-# guts.AmPop.jacc.neg.forsel <- ordiR2step(guts.AmPop.jacc.neg.dbmem.dbrda.0, scope = guts.AmPop.jacc.neg.dbmem.dbrda.all, permutations =9999)
-# guts.AmPop.jacc.neg.forsel.results <- guts.AmPop.jacc.neg.forsel$anova # 10 significant ones. But, adjusted P-values are only 0.040210
-# guts.AmPop.jacc.neg.forsel$adjust
-# 
-# # APPLY SIDAK CORRECTION
-# library(mutoss)
-# guts.jacc.AmPop.final <- sidak(pValues= guts.AmPop.jacc.neg.forsel$anova$`Pr(>F)`)
-# guts.jacc.AmPop.final
-# guts.jacc.AmPop.final$adjPValues #0.000659802 0.004829366 0.015075690 0.012033669 0.038151857 0.037408350 0.061981623 0.091643835 0.191323778 0.295573459
-
-########### wUF ###############
-# 1. CHECK FOR LINEAR TREND AND DETREND DATA
-set.seed(93)
-guts.wUF.AmPop.detrend.mod <-dbrda(guts.wUF.dist~guts_centr_coord[,1]+guts_centr_coord[,2])
-guts.wUF.AmPop.detrend.mod.results <- anova.cca(guts.wUF.AmPop.detrend.mod, permutations=9999) # Pr(>F) = 0.00195 **
-# MARCH 2, 2023: SAME 0.0021 **
-
-guts.wUF.AmPop.dt.dat<-resid(guts.wUF.AmPop.detrend.mod)
-guts.wUF.AmPop.dt.dat
-
-# RUN POS DBMEM ANALYSIS ON DETRENDED DATA
-set.seed(93)
-guts.AmPop.wUF.pos.dbmem.dbrda <- dbrda(guts.wUF.AmPop.dt.dat ~ as.matrix(guts.AmPop.pos.dbmem))
-guts.AmPop.wUF.pos.dbmem.dbrda.results <- anova.cca(guts.AmPop.wUF.pos.dbmem.dbrda, permutations=9999)
-guts.AmPop.wUF.pos.dbmem.dbrda.results #  Pr(>F)= 0.1257 NOT SIGNIFICANT **May 30, 2022: 0.04894 *
-# when ran May 30, 2022, I got that it was barely significant 0.04894...
-# MARCH 2, 2023 DIFFERENT: SIGNIFICANT 0.0473 *
-
-# New ***** April 4, 2023
-# FORWARD MODEL SELECTION USING POSITIVE EIGENVECTORS
-
-# FIRST MAKE A MODEL WITH INTERCEPT ONLY
-set.seed(93)
-guts.AmPop.wUF.pos.dbmem.dbrda.0 <- dbrda(guts.wUF.AmPop.dt.dat ~ 1, data = guts.AmPop.pos.dbmem)
-
-# MAKE A MODEL WITH ALL POTENTIAL MEMS.
-set.seed(93)
-guts.AmPop.wUF.pos.dbmem.dbrda.all <- dbrda(guts.wUF.AmPop.dt.dat ~ ., data = guts.AmPop.pos.dbmem)
-
-# MODEL SELECTION
-set.seed(93)
-guts.AmPop.wUF.pos.forsel <- ordiR2step(guts.AmPop.wUF.pos.dbmem.dbrda.0, scope = guts.AmPop.wUF.pos.dbmem.dbrda.all, permutations =9999)
-guts.AmPop.wUF.pos.forsel.results <- guts.AmPop.wUF.pos.forsel$anova # NO SIGNIFICANT ONES 
-
-# APPLY SIDAK CORRECTION
-guts.wUF.AmPop.pos.final <- sidak(pValues= guts.AmPop.wUF.pos.forsel$anova$`Pr(>F)`)
-guts.wUF.AmPop.pos.final #  0.03786317 0.06797273 0.11256030 0.19921546   SO ONLY TWO SIGNIFICANT REMAIN
-
-# RUN NEG DBMEM ANALYSIS ON DETRENDED DATA
-set.seed(93)
-guts.AmPop.wUF.neg.dbmem.dbrda <- dbrda(guts.wUF.AmPop.dt.dat ~ as.matrix(guts.AmPop.neg.dbmem))
-guts.AmPop.wUF.neg.dbmem.dbrda.results <- anova.cca(guts.AmPop.wUF.neg.dbmem.dbrda, permutations=9999)
-guts.AmPop.wUF.neg.dbmem.dbrda.results # Pr(>F)=  9e-05 *** VERY SIGNIFICANT **May 30, 2022: 0.9511
-# MARCH 2, 2023 DIFFERENT: NOT SIGNIFICANT 0.9528
-# ***** APRIL 4, 2023 : 0.7065 0.9528
-
-# # FORWARD MODEL SELECTION USING NEGATIVE EIGENVECTORS
-# ***** GRAYED OUT SINCE NO LONGER SIGNIFICANT
-# # FIRST MAKE A MODEL WITH INTERCEPT ONLY
-# set.seed(93)
-# guts.AmPop.wUF.neg.dbmem.dbrda.0 <- dbrda(guts.wUF.AmPop.dt.dat ~ 1, data = guts.AmPop.neg.dbmem)
-# 
-# # MAKE A MODEL WITH ALL POTENTIAL MEMS.
-# set.seed(93)
-# guts.AmPop.wUF.neg.dbmem.dbrda.all <- dbrda(guts.wUF.AmPop.dt.dat ~ ., data = guts.AmPop.neg.dbmem)
-# 
-# # MODEL SELECTION
-# set.seed(93)
-# guts.AmPop.wUF.neg.forsel <- ordiR2step(guts.AmPop.wUF.neg.dbmem.dbrda.0, scope = guts.AmPop.wUF.neg.dbmem.dbrda.all, permutations =9999)
-# guts.AmPop.wUF.neg.forsel.results <- guts.AmPop.wUF.neg.forsel$anova # 4 significant ones. But, adjusted P-values are only 0.049836 
-# 
-# # APPLY SIDAK CORRECTION
-# guts.wUF.AmPop.neg.final <- sidak(pValues= guts.AmPop.wUF.neg.forsel$anova$`Pr(>F)`)
-# guts.wUF.AmPop.neg.final #  0.03786317 0.06797273 0.11256030 0.19921546   SO ONLY TWO SIGNIFICANT REMAIN
-
-guts.AmPop.pos.dbmem
-guts.AmPop.pos.dbmem.thresh
-guts.AmPop.neg.dbmem
-guts.jacc.AmPop.detrend.mod
-guts.jacc.AmPop.detrend.mod.results
-guts.jacc.AmPop.dt.dat
-guts.AmPop.jacc.pos.dbmem.dbrda
-guts.AmPop.jacc.pos.dbmem.dbrda.results
-guts.AmPop.jacc.neg.dbmem.dbrda
-guts.AmPop.jacc.neg.dbmem.dbrda.results
-guts.AmPop.jacc.neg.forsel
-guts.AmPop.jacc.neg.forsel.results
-guts.jacc.AmPop.final
-guts.wUF.AmPop.detrend.mod
-guts.wUF.AmPop.detrend.mod.results
-guts.wUF.AmPop.dt.dat
-guts.AmPop.wUF.pos.dbmem.dbrda
-guts.AmPop.wUF.pos.dbmem.dbrda.results
-guts.AmPop.wUF.neg.dbmem.dbrda
-guts.AmPop.wUF.neg.dbmem.dbrda.results
-guts.AmPop.wUF.neg.forsel
-guts.AmPop.wUF.neg.forsel.results
-guts.wUF.AmPop.neg.final
 
 #####################################################
 # This below was all saved March 2, 2023 in "copy" folder
@@ -604,4 +337,9 @@ guts.wUF.AmPop.neg.final
 # #  saved March 2, 2023 in "copy" folder
 # save(guts.AmPop.pos.dbmem, guts.AmPop.pos.dbmem.thresh, guts.AmPop.neg.dbmem, guts.jacc.AmPop.detrend.mod, guts.jacc.AmPop.detrend.mod.results, guts.jacc.AmPop.dt.dat, guts.AmPop.jacc.pos.dbmem.dbrda, guts.AmPop.jacc.pos.dbmem.dbrda.results, guts.AmPop.jacc.neg.dbmem.dbrda, guts.AmPop.jacc.neg.dbmem.dbrda.results, guts.AmPop.jacc.neg.forsel, guts.AmPop.jacc.neg.forsel.results, guts.jacc.AmPop.final, guts.wUF.AmPop.detrend.mod, guts.wUF.AmPop.detrend.mod.results, guts.wUF.AmPop.dt.dat, guts.AmPop.wUF.pos.dbmem.dbrda, guts.AmPop.wUF.pos.dbmem.dbrda.results, guts.AmPop.wUF.neg.dbmem.dbrda, guts.AmPop.wUF.neg.dbmem.dbrda.results, guts.AmPop.wUF.neg.forsel, guts.AmPop.wUF.neg.forsel.results, guts.wUF.AmPop.neg.final, file = "among.pop.allguts.dbMEM_MAY302022.RData")
 # #  saved APRIL 4, 2023 in "copy" folder
-save(guts.AmPop.pos.dbmem, guts.AmPop.pos.dbmem.thresh, guts.AmPop.neg.dbmem, guts.jacc.AmPop.detrend.mod, guts.jacc.AmPop.detrend.mod.results, guts.jacc.AmPop.dt.dat, guts.AmPop.jacc.pos.dbmem.dbrda, guts.AmPop.jacc.pos.dbmem.dbrda.results, guts.AmPop.jacc.neg.dbmem.dbrda, guts.AmPop.jacc.neg.dbmem.dbrda.results, guts.wUF.AmPop.detrend.mod, guts.wUF.AmPop.detrend.mod.results, guts.wUF.AmPop.dt.dat, guts.AmPop.wUF.pos.dbmem.dbrda, guts.AmPop.wUF.pos.dbmem.dbrda.results, guts.AmPop.wUF.neg.dbmem.dbrda, guts.AmPop.wUF.neg.dbmem.dbrda.results, file = "among.pop.allguts.dbMEM_april4_2023.RData")
+#save(guts.AmPop.pos.dbmem, guts.AmPop.pos.dbmem.thresh, guts.AmPop.neg.dbmem, guts.jacc.AmPop.detrend.mod, guts.jacc.AmPop.detrend.mod.results, guts.jacc.AmPop.dt.dat, guts.AmPop.jacc.pos.dbmem.dbrda, guts.AmPop.jacc.pos.dbmem.dbrda.results, guts.AmPop.jacc.neg.dbmem.dbrda, guts.AmPop.jacc.neg.dbmem.dbrda.results, guts.wUF.AmPop.detrend.mod, guts.wUF.AmPop.detrend.mod.results, guts.wUF.AmPop.dt.dat, guts.AmPop.wUF.pos.dbmem.dbrda, guts.AmPop.wUF.pos.dbmem.dbrda.results, guts.AmPop.wUF.neg.dbmem.dbrda, guts.AmPop.wUF.neg.dbmem.dbrda.results, file = "among.pop.allguts.dbMEM_april4_2023.RData")
+
+# SAVED NOV. 23, 2023 
+# save(guts.AmPop.jacc.pos.dbmem.dbrda.results, guts.AmPop.jacc.neg.dbmem.dbrda.results, guts.AmPop.jacc.pos.forsel.results, guts.jacc.AmPop.pos.final, PV.jacc.AmPop.detrend.mod.results,
+#      PV.AmPop.jacc.pos.dbmem.dbrda.results, PV.AmPop.jacc.neg.dbmem.dbrda.results, PV.AmPop.jacc.neg.forsel.results, PV.jacc.AmPop.final, PD.jacc.AmPop.detrend.mod.results, PD.AmPop.jacc.pos.dbmem.dbrda.results, PD.AmPop.jacc.neg.dbmem.dbrda.results, PD.AmPop.jacc.pos.forsel.results, PD.jacc.AmPop.final, guts.jacc.AmPop.detrend.mod.results, guts.AmPop.jacc.pos.dbmem.dbrda.results,
+#      guts.AmPop.jacc.neg.dbmem.dbrda.results, PD.AmPop.jacc.pos.forsel.results, guts.jacc.AmPop.pos.final, file= "inter_pop_dbMEMs_Nov28_2023.RData")
